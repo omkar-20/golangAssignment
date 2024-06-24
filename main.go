@@ -24,7 +24,7 @@ func play(h Hangman, g *Game) (won bool, err error) {
 	h.Placeholder = append(h.Placeholder, "c")
 	h.Entries["lion"] = true
 
-	g.Name = "Animesh Sinha"
+	g.Name = "Omkar Bhosale"
 	g.Placeholder = append(g.Placeholder, "d")
 	return
 }
@@ -40,13 +40,13 @@ func main() {
 		Entries:     make(map[string]bool),
 		Placeholder: []string{"a", "b"},
 		Chances:     8,
-		Name:        "Animesh",
+		Name:        "Omkar",
 	}
 	h1.Entries["deer"] = true
 
 	// Object of Game struct
 	g1 := Game{
-		Name: "Animesh",
+		Name: "Omkar",
 		Hangman: Hangman{
 			Placeholder: []string{"a", "b"},
 			Entries:     make(map[string]bool),
