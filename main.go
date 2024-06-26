@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 )
+var dev = flag.Bool("dev", false, "dev mode")
 func get_keys(entries map[string]bool) (keys []string){
 	for k, _ := range entries {
 		keys = append(keys, k)
@@ -14,6 +17,9 @@ func get_keys(entries map[string]bool) (keys []string){
 	return
 }
 func get_word() string{
+	if *dev {
+		return "elephant"
+	}
    resp, err := http.Get("https://random-word-api.herokuapp.com/word?number=5")
    if err!=nil{
 	return "elephant"
@@ -33,6 +39,7 @@ func get_word() string{
    return words[0]
 }
 func main(){
+	flag.Parse()
   // variable declarations
   word := get_word()
 
@@ -45,54 +52,75 @@ func main(){
 	for i:=0; i<len(word); i++{
 		placeholder = append(placeholder, "_")
 	}
+	t:= time.NewTimer(50*time.Second)
     chances:=8
-	for {
-		// evaluate a loss! If user guesses a wrong letter or the wrong word, they lose a chance.
-		userInput:= strings.Join(placeholder,"")
-	    if chances ==0 && userInput!=word {
-			fmt.Println("game over, try again")
-			break
-		}
-		// evaluate a win!
-	    if userInput==word{
-			fmt.Println("you win")
-			break
-		}
-    		// Console display
-		fmt.Println("\n")
-		 fmt.Println(placeholder) // render the placeholder
-		 fmt.Printf("chances: %d\n", chances) // render the chances left
-		// fmt.Printf() // show the letters or words guessed till now.
-
+	result := make(chan bool)
+	go func(){
+		for {
+			// evaluate a loss! If user guesses a wrong letter or the wrong word, they lose a chance.
+			userInput:= strings.Join(placeholder,"")
+			if chances ==0 && userInput!=word {
+				result <- false
+				fmt.Println("You're out of chances")
+				fmt.Println("Word was: ", word)
+				fmt.Println("game over, try again")
+				return
+			}
+			// evaluate a win!
+			if userInput==word{
+				result <- true
+				fmt.Println("you win")
+				return
+			}
+				// Console display
+			fmt.Println("\n")
+			 fmt.Println(placeholder) // render the placeholder
+			 fmt.Printf("chances: %d\n", chances) // render the chances left
+			// fmt.Printf() // show the letters or words guessed till now.
 	
-		fmt.Println(get_keys(entries))
-		fmt.Printf("Guess a letter or the word: ")
-
-    		// take the input
-		str := ""
-		fmt.Scanln(&str)
-		if len(str)==len(word) && str==word{
-			fmt.Println("you win")
-			break
+		
+			fmt.Println(get_keys(entries))
+			fmt.Printf("Guess a letter or the word: ")
+	
+				// take the input
+			str := ""
+			fmt.Scanln(&str)
+			if len(str)==len(word) && str==word{
+				result  <- true
+				fmt.Println("you win")
+				return
+			}
+				// compare and update entries, placeholder and chances.
+				// check for duplicates
+				_, ok := entries[str]
+				if ok {
+					continue
+				}
+				// update entries
+			   entries[str]=true
+	
+			   found :=false
+			   for i, v := range word {
+				if str==string(v){
+					placeholder[i]= string(v)
+					found = true
+				}
+			   }
+			   if !found {
+				chances -=1
+			   }
+		  }
+	}()
+	for{
+		select {
+		case <- result:
+			fmt.Println("...")
+			goto END
+		case <-t.C:
+			fmt.Println("TimedOut... too bad!")
+			goto END
 		}
-    		// compare and update entries, placeholder and chances.
-			// check for duplicates
-			_, ok := entries[str]
-			if ok {
-				continue
-			}
-			// update entries
-		   entries[str]=true
-
-		   found :=false
-		   for i, v := range word {
-			if str==string(v){
-				placeholder[i]= string(v)
-				found = true
-			}
-		   }
-		   if !found {
-			chances -=1
-		   }
-  	}
+	}
+	END:
+	fmt.Println("play again...")
 }
